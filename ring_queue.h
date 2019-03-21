@@ -3,7 +3,7 @@
 #include <sys/types.h>          /* See NOTES */
 #include <sys/socket.h>
 
-typedef unsigned char u_char;
+typedef unsigned char uchar;
 
 #define CAN_WRITE 0x00
 #define CAN_READ 0x01
@@ -12,103 +12,103 @@ typedef unsigned char u_char;
 
 typedef struct tag
 {
-    u_char tag_value;
-}TAG;
+    uchar tag_value;
+} TAG;
 
 
-class Ring_Queue
+class RingQueue
 {
-    public:
-        Ring_Queue(int nmemb,int size):_nmemb(nmemb),_size(size)
-                                       ,_read_now(0),_write_now(0)
-    {
-        if ( nmemb <= 0 || size <=0 )
-        {
+public:
+    RingQueue(int nmemb,int size)
+    :_nmemb(nmemb),_size(size),
+    _read_now(0),_write_now(0) {
+        if ( nmemb <= 0 || size <=0 ) {
             assert(0);
         }
         _queue_p = NULL;
-        _queue_p = new u_char[ nmemb * (sizeof(TAG) + size)];
+        _queue_p = new uchar[ nmemb * (sizeof(TAG) + size)];
         memset(_queue_p,0,nmemb * (sizeof(TAG) + size));
 
         socketpair(AF_UNIX, SOCK_SEQPACKET, 0, notify_fd);
-
     }
-        ~Ring_Queue()
-        {
-            if (_queue_p) delete []_queue_p;
 
-        }
-        u_char * SOLO_Read()
-        {
-            u_char * g_p = 0;
-            TAG * tag_p = 0;
-            u_char *user_data = 0;
+    ~RingQueue() {
+        if (_queue_p) 
+            delete []_queue_p;
+    }
 
-            g_p = queue_peek_nth(_queue_p,_read_now);
-            tag_p = (TAG *)g_p;
-            if (tag_p->tag_value == CAN_READ)
-            {
-                user_data = (u_char *)g_p + sizeof(TAG);
-                tag_p->tag_value = READING;
-            }
-            return user_data;
-        }
-        void SOLO_Read_Over()
-        {
-            u_char * g_p = 0;
-            TAG * tag_p = 0;
+    uchar* solo_read() {
+        uchar * g_p = 0;
+        TAG * tag_p = 0;
+        uchar *user_data = 0;
 
-            g_p = queue_peek_nth(_queue_p,_read_now);
-            tag_p = (TAG *)g_p;
-            if (tag_p->tag_value == READING)
-            {
-                tag_p->tag_value = CAN_WRITE;
-                _read_now = (_read_now + 1)% _nmemb;
-            }
-        }
-        u_char * SOLO_Write()
+        g_p = queue_peek_nth(_queue_p,_read_now);
+        tag_p = (TAG *)g_p;
+        if (tag_p->tag_value == CAN_READ)
         {
-            u_char * g_p = 0;
-            TAG * tag_p = 0;
-            u_char *user_data = 0;
+            user_data = (uchar *)g_p + sizeof(TAG);
+            tag_p->tag_value = READING;
+        }
+        return user_data;
+    }
 
-            g_p = queue_peek_nth(_queue_p,_write_now);
-            tag_p = (TAG *)g_p;
-            if (tag_p->tag_value == CAN_WRITE)
-            {  
-                user_data = (u_char *)g_p + sizeof(TAG);
-                tag_p->tag_value = WRITING;
-            }                
-            return user_data;
-        }
-        void SOLO_Write_Over()
-        {
-            u_char * g_p = 0;
-            TAG * tag_p = 0;
+    void solo_read_over() {
+        uchar * g_p = 0;
+        TAG * tag_p = 0;
 
-            g_p = queue_peek_nth(_queue_p,_write_now);
-            tag_p = (TAG *)g_p;
-            if (tag_p->tag_value == WRITING)
-            {
-                tag_p->tag_value = CAN_READ;
-                _write_now = (_write_now + 1)% _nmemb;
-            }
-        }
-    private:
-        u_char *queue_peek_nth(u_char *queue_p,int pos)
+        g_p = queue_peek_nth(_queue_p,_read_now);
+        tag_p = (TAG *)g_p;
+        if (tag_p->tag_value == READING)
         {
-            u_char *rst = 0;
-            if (queue_p && pos < _nmemb)
-            {
-                rst = queue_p + pos * (sizeof(TAG) + _size);
-            }
-            return rst;
+            tag_p->tag_value = CAN_WRITE;
+            _read_now = (_read_now + 1)% _nmemb; // once full back to index 0 
         }
-        u_char * _queue_p;
-        int _nmemb;
-        int _size;
-        volatile int _read_now;
-        volatile int _write_now;
-    public:
-        int notify_fd[2];
+    }
+
+    uchar * solo_write() {
+        uchar * g_p = 0;
+        TAG * tag_p = 0;
+        uchar *user_data = 0;
+
+        g_p = queue_peek_nth(_queue_p,_write_now);
+        tag_p = (TAG *)g_p;
+        if (tag_p->tag_value == CAN_WRITE)
+        {  
+            user_data = (uchar *)g_p + sizeof(TAG);
+            tag_p->tag_value = WRITING;
+        }                
+        return user_data;
+    }
+
+    void solo_write_over() {
+        uchar * g_p = 0;
+        TAG * tag_p = 0;
+
+        g_p = queue_peek_nth(_queue_p,_write_now);
+        tag_p = (TAG *)g_p;
+        if (tag_p->tag_value == WRITING)
+        {
+            tag_p->tag_value = CAN_READ;
+            _write_now = (_write_now + 1)% _nmemb;
+        }
+    }
+
+private:
+    uchar *queue_peek_nth(uchar *queue_p, int pos) {
+        uchar *rst = 0;
+        if (queue_p && pos < _nmemb)
+        {
+            rst = queue_p + pos * (sizeof(TAG) + _size);
+        }
+        return rst;
+    }
+
+private:
+    int _nmemb;
+    int _size;
+    uchar* _queue_p;
+    volatile int _read_now;
+    volatile int _write_now;
+public:
+    int notify_fd[2];
 };

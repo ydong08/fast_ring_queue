@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-const int LOOP_SIZE = 10000;
 
 #include <pthread.h>
 #include <stdio.h>
@@ -14,15 +13,16 @@ const int LOOP_SIZE = 10000;
 #include <errno.h>
 #include <unistd.h>
 
+#define DATA_TYPE int
 
 #define THREAD_NUM 1
+#define LOOP_SIZE  10000
 
-#define DATA_TYPE int
 
 void *customer(void *arg)
 {
-	Ring_Queue queue = *(Ring_Queue *)arg;
-    u_char get_num = 0;
+	RingQueue queue = *(RingQueue *)arg;
+    uchar get_num = 0;
     while(1)
     {
         for(int i = 0;i < LOOP_SIZE; )
@@ -33,12 +33,12 @@ void *customer(void *arg)
             for(int j = 0 ; j < get_num;j++)
             //end----for notify
             {
-                p = (DATA_TYPE *)queue.SOLO_Read();
+                p = (DATA_TYPE *)queue.solo_read();
                 if (p)
                 {
                     assert(i == *p);
                     //				printf("[%d]:%d\n",i,*p);
-                    queue.SOLO_Read_Over();
+                    queue.solo_read_over();
                     i++;
                 }
             }
@@ -48,23 +48,23 @@ void *customer(void *arg)
 
 void *producer(void *arg)
 {
-    Ring_Queue queue = *(Ring_Queue *)arg;
+    RingQueue queue = *(RingQueue *)arg;
 
     int loop = 0;
     struct timeval last_time,now_time;
     gettimeofday(&last_time,NULL);
     gettimeofday(&now_time,NULL);
-    u_char wrote_num = 0;
+    uchar wrote_num = 0;
     while(1)
     {
         for(int i = 0;i < LOOP_SIZE; )
         {
             int *p = 0;
-            p = (DATA_TYPE *)queue.SOLO_Write();
+            p = (DATA_TYPE *)queue.solo_write();
             if (p)
             {
                 *p = i;
-                queue.SOLO_Write_Over();
+                queue.solo_write_over();
                 i++;
                 //begin--for notify
                 wrote_num++;
@@ -91,7 +91,7 @@ int main(int argc,char *argv[])
 {
     pthread_t tid_customer[THREAD_NUM];
     pthread_t tid_producer[THREAD_NUM];
-    Ring_Queue *queue = new Ring_Queue[THREAD_NUM](LOOP_SIZE,sizeof(DATA_TYPE));
+    RingQueue *queue = new RingQueue[THREAD_NUM](LOOP_SIZE,sizeof(DATA_TYPE));
 
     for (int i = 0; i < THREAD_NUM; i++)
     {
